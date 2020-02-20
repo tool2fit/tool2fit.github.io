@@ -348,7 +348,8 @@ function mainLoop () {
     handleRadius=15;
     
     // activate all event listeners
-    inputFileButton.addEventListener('change', readNewFile, false);
+    //inputFileButton.addEventListener('change', readNewFile, false);
+    inputFileButton.addEventListener('change', processNewFile, false);
     inputCanvasButton.addEventListener('change', readOldCanvas, false);
     canvas.addEventListener('mousedown', myMouseDown, false);
     canvas.addEventListener('mouseup', myMouseUp, false);

@@ -149,6 +149,64 @@ var readNewFile = debounce(function() {
 
 }, 50);
 
+
+// send image to server for ML processing
+var processNewFile = function() {
+
+    var inputFileButton = document.getElementById('inputFileButton'); 
+    var file = inputFileButton.files; // list of files that were selected by user
+    var reader = [];
+    var img = new Image(1000,1000);
+    
+    if (file[0].name.match('\.jpg')) {
+
+        console.log(file[0].name);
+
+        reader = new FileReader();
+
+        reader.onload = function() {            
+
+            // read the data
+            img.src = reader.result;
+                
+            console.log(img.height);
+            console.log(img.width);
+            console.log(img);
+            ctx.drawImage(img,50,50,210,297);
+        }
+        reader.readAsDataURL(file[0]);     
+    }
+    console.log("read image");
+
+
+
+  /*console.log("processNewFile Before");
+  ctx.drawImage(img, 0, 0, 210, 297);//video is the video element in html which is recieving live data from webcam
+  console.log("processNewFile After");*/
+
+  /*var imgURL = canvas.toDataURL();
+  console.log(imgURL);
+  $.ajax({
+    type: "POST",
+    url: "http://url/take_pic", //I have doubt about this url, not sure if something specific must come before "/take_pic"
+    data: imgURL,
+    success: function(data) {
+      if (data.success) {
+        alert('Your file was successfully uploaded!');
+      } else {
+        alert('There was an error uploading your file!');
+      }
+    },
+    error: function(data) {
+      alert('There was an error uploading your file!');
+    }
+  }).done(function() {
+    console.log("Sent");
+  });*/
+
+};
+
+
 // when the ``disc'' icon is pressed the current "state"
 // of the whole canvas is written as a text string onto a file
 // this file can be downloaded via the browser and by loading
