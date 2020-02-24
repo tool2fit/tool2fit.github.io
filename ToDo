@@ -1,0 +1,126 @@
+Most important:
+
+- now where we have multiple tool boxes we should also write them out in the saveCanvas, restoreCanvas and DFX files.
+
+- write all DXF files for multiple tool boxes
+
+- run things on heroku (see the mega Flask tutorial)
+
+- work on the webpage+github to be able to run things on heroku (toolkaiser should be copied to too2fit.github.io)
+
+- shrink the contour by some amount so that actual cutting creates snug outlines; do we need the orientation of the contour?
+
+- best versions of shape recognizition, automatic tool placement and automatic tool detection
+
+- order some foam from the Canada company; search for some water-jet cutting or laser cutting facility in Atlanta/Ga.Tech
+
+
+Intermediate:
+
+- allow grouping of tools and ungrouping.
+
+- add text tags; use as default the names of files
+
+- add notion of layer; perhaps indicate this notion by width of the line
+
+Nice to have:
+
+- library of known tools; e.g., all the Park bicycle tools
+
+Bugs
+
+- check undo/redo; it sometimes add things just to change selection label; if we could get rid of it it would be nice
+
+- clean up tool handle icon
+
+DONE AND FIXED:
+
+- after you move an object it is selected even if it was not selected before; probably better not to change the status of the tool through the move
+
+- allow "artificial objects" like circle and squares to change dimensions
+
+- fix copy and past function on Mac
+
+- synthetic tool resizing still seems buggy
+
+- when we press 'backspace' to change the form field, the tool gets deleted. So we only want to trigger backspace when we are in canvas.
+
+- write to file and read back 
+
+- when you space the tools the order of the tools that it places
+	goes by the order of the elements in the list and not where they currently are; so we should
+	first figure out how they are ordered in the current setup
+
+- undo button at least one step
+
+- when reading back a file all tools are selected; this is due to the fact that 
+when parsing the selected flag there is a problem; not clear why
+
+- quick position of handles currently does not take the rotation and flip into account
+
+- [3/2/2020--RU] do undo also when we create or read in objects
+
+- [3/2/2020--RU] add keyboard shortcuts for the various operations
+
+- [3/2/2020--SK&RU] export into dxf format or other format readable by laser cutting program
+
+- [4/2/2020--SK&RU] implement a redo feature; not clear exactly what
+
+- [4/2/2020--SK&RU] draw bounding boxes around selected tools
+
+- [4/2/2020--SK&RU] align top, bottom, left and right of bounding boxes
+
+- [5/2/2020--SK&RU]  align tool handles for selected tools
+
+- Since we now compress the paths we show the circles around each point in the tool editor. 
+
+- slider for showing smoothing (simplify.js)
+
+- in the edit tool; when we delete either the first or last point (they must always be the same
+in order for the path to close) then we should delete both but add as a last point a copy of what used to be the second point
+
+- add an editor to smooth paths; this requires that we see the tools, i.e.,
+have a "street view" view 
+
+- drag a point around
+
+- position the tool in the center and maximise the scaling 
+
+- show selected things in blue
+
+- multiple selections either by shift-click or ctrl-click OR by region selection
+
+- undo and redo
+
+- satellite view
+
+- scaling of the tool (scale the bounding box to fit in canvas and then scale the tool appropriately)
+
+- fix opacity label in edit tool
+
+- vertical tool spacing (not working, but horizontal does)
+
+- attaching new points to edit tool
+
+- when reading in canvas the canvas is not properly sized
+
+- make selection box by default and canvas when hold shift key as you suggested
+
+- add a notion of material on the right
+
+ 
+- add notion of of several tool boxes and be able to copy in between
+
+- add paper size change to front page and remove from edit tool
+
+- multiple tool box has bugs
+
+- show the paper size for each tool
+
+- dxf issue; just reading the file in vi and writing it back without changes fixes things
+
+- added anchor points and distance measure to different points
+
+- running full-pipeline via localhost server
+
+

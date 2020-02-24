@@ -33,7 +33,7 @@ var makeToolCopy = function(tool, withData){
     
     newTool.handleCenterX = tool.handleCenterX; 
     newTool.handleCenterY = tool.handleCenterY; 
-    newTool.handleRadius = tool.handleRadius;
+    newTool.handleDiameter = tool.handleDiameter;
 
     newTool.selected = false;  // for the following three parameters
     newTool.insideTool = false;  // it does not make sense to remember the state
@@ -65,7 +65,7 @@ var copyParameters = function(fromTool, toTool){
     
     toTool.handleCenterX = fromTool.handleCenterX; 
     toTool.handleCenterY = fromTool.handleCenterY; 
-    toTool.handleRadius = fromTool.handleRadius;
+    toTool.handleDiameter = fromTool.handleDiameter;
 
     toTool.selected = false;  // for the following three parameters
     toTool.insideTool = false;  // it does not make sense to remember the state

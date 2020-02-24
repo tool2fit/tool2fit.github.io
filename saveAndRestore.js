@@ -150,62 +150,192 @@ var readNewFile = debounce(function() {
 }, 50);
 
 
-// send image to server for ML processing
-var processNewFile = function() {
+// read image(s) from local directory, send
+// them to server for processing; create a new tool
+// using the data we get back
+var readAndProcessImageAndCreateNewTool = debounce(function() {
 
+    // get id from button that was pressed
     var inputFileButton = document.getElementById('inputFileButton'); 
-    var file = inputFileButton.files; // list of files that were selected by user
-    var reader = [];
-    var img = new Image(1000,1000);
+    // get list of files that were selected by user
+    var file = inputFileButton.files; 
+    // a new file reader that will contain the data
+    var reader = [];    
     
-    if (file[0].name.match('\.jpg')) {
+    // go over all the selected files
+    for (var i = 0; i < file.length; i++) {
 
-        console.log(file[0].name);
+        // check that we only read in jpg files
+        if (file[i].name.match('\.jpg')) {
 
-        reader = new FileReader();
+            // create the new file reader
+            reader[i] = new FileReader();
 
-        reader.onload = function() {            
+            // once the file has been loaded
+            // start the processing
+            reader[i].onload = function() {            
 
-            // read the data
-            img.src = reader.result;
+                // create image variable to hold the new image
+                var img = new Image(1000,1000); 
+                // put the image inside
+                img.src = this.result;
                 
-            console.log(img.height);
-            console.log(img.width);
-            console.log(img);
-            ctx.drawImage(img,50,50,210,297);
+                // get rid of the header in the image
+                var imgWithoutHeader = img.src.replace(/^data:image\/(png|jpeg);base64,/, ""); 
+
+                // create a tool
+                var tool = new Tool("free");
+                tool.filename = this.fileName.slice(0,-4);                  
+
+                $.ajax({
+                    type: "POST", 
+                    url: "http://127.0.0.1:5000/api/sendImg", 
+                    data: imgWithoutHeader,
+                    contentType: "text/plain",
+                    dataType: "json",
+                    success: function(response) {
+            
+                        // the first part is the jpeg                         
+                        chull = response.convexhull;
+                        rdata = response.rawdata;
+                        
+                        var receivedb64 = response.jpeg;   
+                        var receivedb64New = receivedb64.slice(2,receivedb64.length-1); 
+                        var imgReceived = new Image(1000,1000); 
+                        imgReceived.src = 'data:image/jpeg;base64,'+ receivedb64New;
+                        tool.img.src = imgReceived.src;
+                        
+                        imgReceived.src = 'data:image/jpeg;base64,'+ receivedb64New; 
+    
+                        // the first data in the file is the image offset        
+                        tool.imgOffset[0] = response.offsetX;
+                        tool.imgOffset[1] = response.offsetY;
+
+                        // next comes the tool outline
+                        for (var k=0; k < rdata.length/2; k++){
+                            tool.rawdata.push([parseFloat(rdata[2*k]), parseFloat(rdata[2*k+1])]);
+                        };
+                        
+                        // next comes the convex hull
+                        for (var k=0; k < chull.length/2; k++){
+                            tool.convexhull.push([parseFloat(chull[2*k]), parseFloat(chull[2*k+1])]);
+                        };           
+                        
+                        // make out of the original tool outline the edited data
+                        var allPointObjects = pointsConversion(tool.rawdata, 'toObject');
+                        // now do the smoothing: first do a lot of smoothing; 
+                        // this is reflected by the parameter 3
+                        var allPointObjectsSmooth = simplify(allPointObjects,3,true);
+                        tool.editeddata = pointsConversion(allPointObjectsSmooth, 'toArray');
+                        // look for the longest segment in this path
+                        var maxlength = 0;
+                        var maxindex;
+                        for (var j=1; j<tool.editeddata.length; j++) {
+                            if ((newlength = Math.pow(tool.editeddata[j][0]-tool.editeddata[j-1][0], 2.0)+Math.pow(tool.editeddata[j][1]-tool.editeddata[j-1][1], 2.0))> maxlength) {
+                                maxlength = Math.pow(tool.editeddata[j][0]-tool.editeddata[j-1][0], 2.0)+Math.pow(tool.editeddata[j][1]-tool.editeddata[j-1][1], 2.0);
+                                maxindex = j-1;
+                            }
+                        }
+
+                        // compute the best angle based on this
+                        var angle = Math.atan((tool.editeddata[maxindex+1][1]-tool.editeddata[maxindex][1])/(tool.editeddata[maxindex+1][0]-tool.editeddata[maxindex][0])) * 360/(2* Math.PI);
+                        tool.angle -= angle;
+
+                        // now do only some smoothing; this is what we will use for the path
+                        allPointObjectsSmooth = simplify(allPointObjects,0.75,true);
+
+                        // put the result into rawdata
+                        tool.editeddata = pointsConversion(allPointObjectsSmooth, 'toArray');
+
+                        // create a new path out of this
+                        var newString = "M ";
+                        for (var j=0; j<tool.editeddata.length; j++) {
+                            newString+= tool.editeddata[j][0].toString() + " " + tool.editeddata[j][1].toString() + " ";
+                        }
+        
+                        // put this path into the tool
+                        tool.path = new Path2D(newString);                        
+
+                        // compute the average; this is used as center
+                        var avgX=0;
+                        var avgY=0;
+                        for (var j = 0; j < tool.editeddata.length; j++) {
+                            avgX+=tool.editeddata[j][0];
+                            avgY+=tool.editeddata[j][1];
+                        }
+                        tool.avgX = avgX/tool.editeddata.length;
+                        tool.avgY = avgY/tool.editeddata.length;
+
+                        // choose the offset randomly in such a way that we get a uniform distribution over all
+                        // positions such that the bounding box is entirely in the canvas
+                        computeBoundingBox(tool);
+                        tool.offsetX = Math.random()*(document.getElementById('myCanvasWidth').value-tool.maxX+tool.minX)-tool.avgX-tool.minX;
+                        tool.offsetY = Math.random()*(document.getElementById('myCanvasHeight').value-tool.maxY+tool.minY)-tool.avgY-tool.minY;
+                        
+                        // find a good placement of the handle
+                        tool.handleCenterX = tool.avgX;
+                        tool.handleCenterY = tool.avgY;
+                        findClosestHandleCenter(tool);
+
+                        // attach this tool to the list of tools
+                        regularCanvas.allTools.push(tool);   
+                        
+                        // push this action also onto the undo stack
+                        // no need to push the tool itself onto this stack
+                        pushOntoUndoStack(regularCanvas.allTools.length-1, "c", false, true);
+                        
+                    },
+                    error: function(response) {
+                    }
+                }).done(function() {
+                    console.log("Sent");
+                });
+            }
+            reader[i].fileName = file[i].name;            
+            reader[i].readAsDataURL(file[i]);            
         }
-        reader.readAsDataURL(file[0]);     
     }
-    console.log("read image");
 
+}, 50);
 
+/* // send image to the server
+var sendImageToServer = function() {
+        
+    var receivedb64='';    
+    var receivedb64New='';   
 
-  /*console.log("processNewFile Before");
-  ctx.drawImage(img, 0, 0, 210, 297);//video is the video element in html which is recieving live data from webcam
-  console.log("processNewFile After");*/
+    // get rid of the header in the image
+    var imgData = img.src.replace(/^data:image\/(png|jpeg);base64,/, ""); 
 
-  /*var imgURL = canvas.toDataURL();
-  console.log(imgURL);
-  $.ajax({
-    type: "POST",
-    url: "http://url/take_pic", //I have doubt about this url, not sure if something specific must come before "/take_pic"
-    data: imgURL,
-    success: function(data) {
-      if (data.success) {
-        alert('Your file was successfully uploaded!');
-      } else {
-        alert('There was an error uploading your file!');
-      }
-    },
-    error: function(data) {
-      alert('There was an error uploading your file!');
-    }
-  }).done(function() {
-    console.log("Sent");
-  });*/
+    $.ajax({
+        type: "POST", 
+        url: "http://127.0.0.1:5000/api/sendImg", 
+        data: imgData,
+        contentType: "text/plain",
+        dataType: "json",
+        success: function(response) {
+ 
+            // the first part is the jpeg 
+            receivedb64 = response.jpeg;   
+            receivedb64New = receivedb64.slice(2,receivedb64.length-1); 
+            imgNew.src = 'data:image/jpeg;base64,'+ receivedb64New;
 
-};
+            // offset of the tool in the jpeg
+            offX = response.offsetX;
+            offY = response.offsetY;
 
+            // data corresponding to convex hull
+            var chull = response.convexhull;
+            var rdata = response.rawdata;
+            console.log(chull);
+            
+        },
+        error: function(response) {
+        }
+    }).done(function() {
+        console.log("Sent");
+    });
+} */
 
 // when the ``disc'' icon is pressed the current "state"
 // of the whole canvas is written as a text string onto a file
@@ -282,8 +412,8 @@ var saveCanvasFunction = function() {
         myString += String(tool.handleCenterY);
         myString += "   # handleCenterY # \n";
        
-        myString += String(tool.handleRadius);
-        myString += "   # handleRadius # \n";
+        myString += String(tool.handleDiameter);
+        myString += "   # handleDiameter # \n";
 
         myString += String(tool.slider);
         myString += "   # slider value # \n";
@@ -292,7 +422,7 @@ var saveCanvasFunction = function() {
         myString += "   # opacity # \n";
 
         myString += String(tool.backgroundPaperSize);
-        myString += "   # handleRadius # \n";
+        myString += "   # backgroundPaperSize # \n";
 
     });
 
@@ -327,152 +457,152 @@ var saveCanvasFunction = function() {
 
 // read in a text file that was previously stored by saveCanvas
 // and that describes a whole canvas
-var readOldCanvas = function() {
-
-    var myRawData = [];
-
-    console.log("here");
-
-    // string that contains the read file as text
-    var rawFile = new XMLHttpRequest(); 
+var readOldCanvas = debounce(function() {
+ 
     var inputCanvasButton = document.getElementById('inputCanvasButton'); 
+    var file = inputCanvasButton.files; // list of files that were selected by user
+    var reader; // array to store the files in
+    // var myRawData = []; // array to store raw data in
 
-    // get name of the selected file
-    var file = inputCanvasButton.files; //  the file that was selected
+    console.log(file[0].name);
 
-    // read in a text file that contains the state 
-    // of a previously saved canvas
-    var readTextFile = function(file)
-        {
-        rawFile.open("GET", file, false);
-        rawFile.onreadystatechange = function (){
-            if(rawFile.readyState === 4)
-                {
-                if(rawFile.status === 200 || rawFile.status == 0){
-                    var allText = rawFile.responseText;
-                    // alert(allText);
-                }
+    if (file[0].name.match('\.txt')) {
+
+        // create an object to read the file into
+        reader = new FileReader();
+            
+        reader.onload =  function () {
+
+            var myString= this.result;
+            console.log(myString);
+    
+
+            // the file has the following structure
+            // each line has a value plus a comment
+            var mySplitString = myString.split('#'); 
+
+            var i=0;
+            // now put this data into our canvas: first the main canvas parameters
+            // canvas width
+            regularCanvas.width = parseFloat(mySplitString[2*i]); i++;  
+
+            // canvas height
+            regularCanvas.height = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+            
+
+            // units
+            regularCanvas.unitsinmm = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+            unitsinmm = regularCanvas.unitsinmm;
+            document.getElementById('selectUnit').value = unitsinmm;
+
+            // magnification
+            regularCanvas.magnification = parseFloat(mySplitString[2*i].split("\n")[1]).toFixed(2); i++;
+            magnification = regularCanvas.magnification;
+            document.getElementById('selectCustomMagnification').value = magnification;
+            
+            // it is not enough to put the values into the fields
+            // we also need to update the global variables
+            scale = magnification*pxpermm;
+            regularCanvas.scale = scale;
+
+
+            document.getElementById('myCanvasWidth').value = regularCanvas.width;
+            document.getElementById('myCanvasHeight').value = regularCanvas.height;
+
+            // determine how many tools there are
+            var numTools = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+            // console.log("numTools:=", numTools);
+            regularCanvas.allTools = [];
+
+            // now loop over all tools and read in all data per tool
+            for (var index = 0; index<numTools; index++) {
+
+                // create a new path and then a new tool
+                // the path with the real data is not known at this point
+                // hence just put something in there for now
+                var tool = new Tool("free");
+
+                // attach this tool to the list of tools
+                regularCanvas.allTools.push(tool); 
+
+                // now put the data in there
+                i++; // skip the entry where it says what tool number it is
+                tool.type = "free";
+                if ((mySplitString[2*i].split("\n")[1]).includes("rectangle"))
+                    tool.type = "rectangle"; 
+                if ((mySplitString[2*i].split("\n")[1]).includes("ellipse"))
+                    tool.type = "ellipse";  
+                i++;
+
+                // convert the raw data back into an array of pairs
+                myRawData=(mySplitString[2*i].split("\n")[1]).split(",");
+                tool.rawdata = [];
+                    for (var j = 0; j < myRawData.length/2; j++) {
+                        tool.rawdata.push([parseFloat(myRawData[2*j]), parseFloat(myRawData[2*j+1])]);
+                    }; 
+                i++;
+                // convert the raw data back into an array of pairs
+                myRawData=(mySplitString[2*i].split("\n")[1]).split(",");
+                tool.convexhull = [];
+                    for (var j = 0; j < myRawData.length/2; j++) {
+                        tool.convexhull.push([parseFloat(myRawData[2*j]), parseFloat(myRawData[2*j+1])]);
+                    }; 
+                i++;
+                // convert the raw data back into an array of pairs
+                myEditedData=(mySplitString[2*i].split("\n")[1]).split(",");
+                tool.editeddata = [];
+                    for (var j = 0; j < myEditedData.length/2; j++) {
+                        tool.editeddata.push([parseFloat(myEditedData[2*j]), parseFloat(myEditedData[2*j+1])]);
+                    }; 
+                i++;
+                tool.filename = mySplitString[2*i].split("\n")[1]; i++;
+                tool.imgOffset.push(parseFloat(mySplitString[2*i].split("\n")[1])); i++;
+                tool.imgOffset.push(parseFloat(mySplitString[2*i].split("\n")[1])); i++;
+                tool.offsetX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.offsetY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.angle = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.horizontalFlip = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.verticalFlip = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.avgX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.avgY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.handleCenterX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.handleCenterY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.handleDiameter = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.slider = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.opacity = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+                tool.backgroundPaperSize = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
+
+            
+                // now recompute the path from the edited data
+                // console.log("M " + myEditedData);
+                computeBoundingBox(tool);
+                var realpath = new Path2D("M " + tool.editeddata);
+                tool.path = realpath;
+            
             }
+
+            //make sure all parameters are set correctly
+            resizeCanvas();
+
+            // plot all tools
+            regularPlot();
         }
-        rawFile.send(null);
+
+        // read that file
+        reader.fileName = file[0].name;
+        reader.readAsText(file[0]);
     }
-
-
-    // now read in the chosen file
-    readTextFile(file[0].name);
-
-    var myString = rawFile.response;
-    // console.log(myString);
-    // the file has the following structure
-    // each line has a value plus a comment
-    var mySplitString = myString.split('#'); 
-
-    var i=0;
-    // now put this data into our canvas: first the main canvas parameters
-    // canvas width
-    regularCanvas.width = parseFloat(mySplitString[2*i]); i++;  
-
-    // canvas height
-    regularCanvas.height = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-    
-
-    // units
-    regularCanvas.unitsinmm = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-    unitsinmm = regularCanvas.unitsinmm;
-    document.getElementById('selectUnit').value = unitsinmm;
-
-    // magnification
-    regularCanvas.magnification = parseFloat(mySplitString[2*i].split("\n")[1]).toFixed(2); i++;
-    magnification = regularCanvas.magnification;
-    document.getElementById('selectCustomMagnification').value = magnification;
-    
-    // it is not enough to put the values into the fields
-    // we also need to update the global variables
-    scale = magnification*pxpermm;
-    regularCanvas.scale = scale;
-
-
-    document.getElementById('myCanvasWidth').value = regularCanvas.width;
-    document.getElementById('myCanvasHeight').value = regularCanvas.height;
-
-    // determine how many tools there are
-    var numTools = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-    // console.log("numTools:=", numTools);
-    regularCanvas.allTools = [];
-
-    // now loop over all tools and read in all data per tool
-    for (var index = 0; index<numTools; index++) {
-
-        // create a new path and then a new tool
-        // the path with the real data is not known at this point
-        // hence just put something in there for now
-        var tool = new Tool("free");
-
-        // attach this tool to the list of tools
-        regularCanvas.allTools.push(tool); 
-
-        // now put the data in there
-        i++; // skip the entry where it says what tool number it is
-        tool.type = "free";
-        if ((mySplitString[2*i].split("\n")[1]).includes("rectangle"))
-            tool.type = "rectangle"; 
-        if ((mySplitString[2*i].split("\n")[1]).includes("ellipse"))
-            tool.type = "ellipse";  
-        i++;
-
-        // convert the raw data back into an array of pairs
-        myRawData=(mySplitString[2*i].split("\n")[1]).split(",");
-        tool.rawdata = [];
-            for (var j = 0; j < myRawData.length/2; j++) {
-                tool.rawdata.push([parseFloat(myRawData[2*j]), parseFloat(myRawData[2*j+1])]);
-            }; 
-        i++;
-        // convert the raw data back into an array of pairs
-        myRawData=(mySplitString[2*i].split("\n")[1]).split(",");
-        tool.convexhull = [];
-            for (var j = 0; j < myRawData.length/2; j++) {
-                tool.convexhull.push([parseFloat(myRawData[2*j]), parseFloat(myRawData[2*j+1])]);
-            }; 
-        i++;
-        // convert the raw data back into an array of pairs
-        myEditedData=(mySplitString[2*i].split("\n")[1]).split(",");
-        tool.editeddata = [];
-            for (var j = 0; j < myEditedData.length/2; j++) {
-                tool.editeddata.push([parseFloat(myEditedData[2*j]), parseFloat(myEditedData[2*j+1])]);
-            }; 
-        i++;
-        tool.filename = mySplitString[2*i].split("\n")[1]; i++;
-        tool.imgOffset.push(parseFloat(mySplitString[2*i].split("\n")[1])); i++;
-        tool.imgOffset.push(parseFloat(mySplitString[2*i].split("\n")[1])); i++;
-        tool.offsetX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.offsetY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.angle = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.horizontalFlip = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.verticalFlip = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.avgX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.avgY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.handleCenterX = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.handleCenterY = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.handleRadius = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.slider = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.opacity = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-        tool.backgroundPaperSize = parseFloat(mySplitString[2*i].split("\n")[1]); i++;
-
-    
-        // now recompute the path from the edited data
-        // console.log("M " + myEditedData);
-        computeBoundingBox(tool);
-        var realpath = new Path2D("M " + tool.editeddata);
-        tool.path = realpath;
-    
+    else {            
+        Alert("File not supported!");
     }
+    
 
-    //make sure all parameters are set correctly
-    resizeCanvas();
+}, 50);
 
-    // plot all tools
-    regularPlot();
-};
+
+
+
+    
 
 
 // write in DXF format
@@ -587,7 +717,7 @@ var exportToDXFButtonFunction = function() {
         DXFpath += "0\nCIRCLE\n";
         DXFpath += "10\n" + String(x)+"\n";
         DXFpath += "20\n" + String(y)+"\n";
-        DXFpath += "40\n" + String(tool.handleRadius)+"\n";                    
+        DXFpath += "40\n" + String(tool.handleDiameter/2.0)+"\n";                    
     });   
 
     // post-amble

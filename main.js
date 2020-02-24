@@ -1,4 +1,7 @@
 // global variables
+
+
+//var imgData;
 var canvas; // canvas on which we plot
 var ctx;   // context
 var pxpermm = 3.77953; // guess about how many px make one mm on the screen
@@ -7,7 +10,7 @@ var maxUndoStackSize = 5000; // how many undo steps we can do;
 // the copy buffer should be a single globabl buffer so
 // that later we can copy between different canvases'
 var copyToolsBuffer = []; // array containing all the tools which have been copied
-var handleRadius; // global radius of all handles
+var handleDiameter; // global radius of all handles
 
 var regularCanvasStack = [];
 var regularCanvasIndex = 1;
@@ -110,7 +113,7 @@ class Tool {
 
         this.handleCenterX = 0; // handle/grip circle center 
         this.handleCenterY = 0; // handle/grip circle center
-        this.handleRadius = handleRadius; // radius of the handle in mm
+        this.handleDiameter = handleDiameter; // radius of the handle in mm
  
         this.selected = false; // {true, false} depending if the tool is currently selected or not
         this.insideTool = false; // {true, false} depending whether mouse is inside or outside this tool
@@ -200,7 +203,7 @@ class Tool {
 
             ctx.save();
             ctx.beginPath();
-            ctx.arc(this.handleCenterX,this.handleCenterY,this.handleRadius,0,2*Math.PI); 
+            ctx.arc(this.handleCenterX,this.handleCenterY,this.handleDiameter/2.0,0,2*Math.PI); 
             if (this.selected) ctx.setLineDash([2,4]); 
             ctx.stroke();
             ctx.fillStyle = myHandleColor;
@@ -212,9 +215,21 @@ class Tool {
 
             ctx.strokeStyle = myHandleColor;
             ctx.beginPath();
-            ctx.arc(this.handleCenterX,this.handleCenterY,this.handleRadius,0,2*Math.PI);                
+            ctx.arc(this.handleCenterX,this.handleCenterY,this.handleDiameter/2.0,0,2*Math.PI);                
             ctx.stroke(); 
         }
+
+        // clip the image to the editeddata
+        var newString = "M ";
+        for (var i=0; i<this.editeddata.length; i++) {
+            newString+= this.editeddata[i][0].toString() + " " + this.editeddata[i][1].toString() + " ";
+        }
+        var path = new Path2D(newString);
+        ctx.clip(path); 
+
+        ctx.globalAlpha = this.opacity;
+        ctx.drawImage(this.img,-210/this.img.width*this.imgOffset[0]*this.backgroundPaperSize,-297/this.img.height*this.imgOffset[1]*this.backgroundPaperSize,210*this.backgroundPaperSize,297*this.backgroundPaperSize);
+        //ctx.drawImage(this.img,-210/this.img.width*this.imgOffset[0],-297/this.img.height*this.imgOffset[1],210,297);
 
         ctx.restore();
     }   
@@ -232,6 +247,8 @@ class Tool {
         // tool image if we have it; the other parts should be drawn on top
         if (this.img.width>5) {
 
+
+            /* console.log(this.img.src); */
             ctx.save(); 
             // offset of the paper  
             //ctx.translate(editCanvas.offsetX, editCanvas.offsetY);
@@ -248,9 +265,10 @@ class Tool {
             }
             path = new Path2D(newString);
             ctx.clip(path); 
-                
+          
             ctx.globalAlpha = this.opacity;
-            ctx.drawImage(this.img,-210/this.img.width*this.imgOffset[0],-297/this.img.height*this.imgOffset[1],210,297);
+            ctx.drawImage(this.img,-210/this.img.width*this.imgOffset[0]*this.backgroundPaperSize,-297/this.img.height*this.imgOffset[1]*this.backgroundPaperSize,210*this.backgroundPaperSize,297*this.backgroundPaperSize);
+            //ctx.drawImage(this.img,-210/this.img.width*this.imgOffset[0],-297/this.img.height*this.imgOffset[1],210,297);
             ctx.restore();
         }
 
@@ -312,16 +330,17 @@ function mainLoop () {
     var alignVerticalRightButton = document.getElementById('alignVerticalRightButton');
     var alignHandleHorizontalButton = document.getElementById('alignHandleHorizontalButton');
     var alignHandleVerticalButton = document.getElementById('alignHandleVerticalButton');
-    var myHandleRadius = document.getElementById('myHandleRadius');
+    var myHandleDiameter = document.getElementById('myHandleDiameter');
     var addRectButton = document.getElementById('addRectButton');    
     var addEllipseButton = document.getElementById('addEllipseButton');
-    var myRadiusX = document.getElementById('myRadiusX');
-    var myRadiusY = document.getElementById('myRadiusY');
+    var myDiameterX = document.getElementById('myDiameterX');
+    var myDiameterY = document.getElementById('myDiameterY');
     var rotateLeftButton = document.getElementById('rotateLeftButton');
     var rotateRightButton = document.getElementById('rotateRightButton');
     var saveCanvas = document.getElementById('saveCanvas');
     var anchorPointButton = document.getElementById('anchorPointButton');
-       
+    var mainCanvasOpacity = document.getElementById('mainCanvasOpacity');    
+
     // hide the toolEdit buttons initially
     document.getElementById('grid-item-toolEdit-buttons').style.display = "none";
 
@@ -345,11 +364,10 @@ function mainLoop () {
     regularCanvas.offsetX = Math.max(0, (canvas.width-regularCanvas.width*regularCanvas.scale)/2);
     regularCanvas.offsetY = Math.min(50,Math.max(0, (canvas.height-regularCanvas.height*regularCanvas.scale)/2));
 
-    handleRadius=15;
+    handleDiameter=20;
     
     // activate all event listeners
-    //inputFileButton.addEventListener('change', readNewFile, false);
-    inputFileButton.addEventListener('change', processNewFile, false);
+    inputFileButton.addEventListener('change', readAndProcessImageAndCreateNewTool, false);
     inputCanvasButton.addEventListener('change', readOldCanvas, false);
     canvas.addEventListener('mousedown', myMouseDown, false);
     canvas.addEventListener('mouseup', myMouseUp, false);
@@ -375,15 +393,19 @@ function mainLoop () {
     alignVerticalRightButton.addEventListener('click', function(){alignVerticalButtonFunction('right')}, false);
     alignHandleHorizontalButton.addEventListener('click', alignHandleHorizontalButtonFunction, false); 
     alignHandleVerticalButton.addEventListener('click', alignHandleVerticalButtonFunction, false); 
-    myHandleRadius.addEventListener('change', myHandleRadiusFunction, false); 
+    myHandleDiameter.addEventListener('change', myHandleDiameterFunction, false); 
     addRectButton.addEventListener('click', addRectButtonFunction, false);    
     addEllipseButton.addEventListener('click', addEllipseButtonFunction, false);
-    myRadiusX.addEventListener('change', changeEllipseRect, false); 
-    myRadiusY.addEventListener('change', changeEllipseRect, false); 
+    myDiameterX.addEventListener('change', changeEllipseRect, false); 
+    myDiameterY.addEventListener('change', changeEllipseRect, false); 
     rotateLeftButton.addEventListener('click', rotateLeftButtonFunction, false);
     rotateRightButton.addEventListener('click', rotateRightButtonFunction, false);
     saveCanvas.addEventListener('click', saveCanvasFunction, false);
     anchorPointButton.addEventListener('click', anchorPointButtonFunction, false);
+    mainCanvasOpacity.addEventListener('change', setMainCanvasOpacityFunction, false);   
+
+    // set the initial slider value of the main canvas opacity
+    document.getElementById('mainCanvasOpacity').value = 0.5;
 
     // redraw all tools
     regularPlot();
@@ -421,7 +443,7 @@ var myDoubleClick = function() {
         document.getElementById('grid-item-toolEdit-buttons').style.display = "block";
 
         // disable regular listeners
-        inputFileButton.removeEventListener('change', readNewFile, false);
+        inputFileButton.removeEventListener('change', readAndProcessImageAndCreateNewTool, false);
         inputCanvasButton.removeEventListener('change', readOldCanvas, false);
         canvas.removeEventListener('mousedown', myMouseDown, false);
         canvas.removeEventListener('mouseup', myMouseUp, false);
@@ -447,14 +469,16 @@ var myDoubleClick = function() {
         alignVerticalRightButton.removeEventListener('click', function(){alignVerticalButtonFunction('right')}, false);
         alignHandleHorizontalButton.removeEventListener('click', alignHandleHorizontalButtonFunction, false); 
         alignHandleVerticalButton.removeEventListener('click', alignHandleVerticalButtonFunction, false); 
-        myHandleRadius.removeEventListener('change', myHandleRadiusFunction, false); 
+        myHandleDiameter.removeEventListener('change', myHandleDiameterFunction, false); 
         addRectButton.removeEventListener('click', addRectButtonFunction, false);        
         addEllipseButton.removeEventListener('click', addEllipseButtonFunction, false);
-        myRadiusX.removeEventListener('change', changeEllipseRect, false); 
-        myRadiusY.removeEventListener('change', changeEllipseRect, false); 
+        myDiameterX.removeEventListener('change', changeEllipseRect, false); 
+        myDiameterY.removeEventListener('change', changeEllipseRect, false); 
         rotateLeftButton.removeEventListener('click', rotateLeftButtonFunction, false);
         rotateRightButton.removeEventListener('click', rotateRightButtonFunction, false);
         saveCanvas.removeEventListener('click', saveCanvasFunction, false);
+        anchorPointButton.removeEventListener('click', anchorPointButtonFunction, false);
+        mainCanvasOpacity.removeEventListener('change', setMainCanvasOpacityFunction, false);   
 
         // compute the current bounding box
         computeBoundingBox(editCanvas.toolToEdit);
@@ -495,8 +519,8 @@ var myDoubleClick = function() {
         canvas.addEventListener('mousemove', myMouseMoveAfterDoubleClick, false);
         canvas.addEventListener('mousedown', myMouseDownAfterDoubleClick, false);
 
-        var inputToolImage = document.getElementById('inputToolImage');
-        inputToolImage.addEventListener('change', inputToolImageFunction, false);
+        //var inputToolImage = document.getElementById('inputToolImage');
+        //inputToolImage.addEventListener('change', inputToolImageFunction, false);
 
         undoEditButton.addEventListener('click', undoEditButtonFunction, false); 
         redoEditButton.addEventListener('click', redoEditButtonFunction, false); 
@@ -943,7 +967,7 @@ var myMouseMove = function() {
         // perhaps the problem is that we draw the path inside the environment where
         // we modified the scaling etc???
         var handle = new Path2D();
-        handle.arc(tool.handleCenterX,tool.handleCenterY,tool.handleRadius,0,2*Math.PI); 
+        handle.arc(tool.handleCenterX,tool.handleCenterY,tool.handleDiameter/2.0,0,2*Math.PI); 
         if (ctx.isPointInPath(handle, event.offsetX-regularCanvas.offsetX, event.offsetY-regularCanvas.offsetY)) {
             tool.insideHandle = true;
         }
@@ -971,14 +995,14 @@ var myMouseClick = function() {
             if (tool.selected == false) {
                 tool.selected = true;
                 if (tool.type == "ellipse"){
-                    document.getElementById('myRadiusX').value=tool.editeddata[0][0];
-                    document.getElementById('myRadiusY').value=tool.editeddata[25][1];                    
+                    document.getElementById('myDiameterX').value=tool.editeddata[0][0]*2.0;
+                    document.getElementById('myDiameterY').value=tool.editeddata[25][1]*2.0;                    
                 }
                 if (tool.type == "rectangle"){
-                    document.getElementById('myRadiusX').value=2*tool.editeddata[2][0];
-                    document.getElementById('myRadiusY').value=2*tool.editeddata[3][1];
+                    document.getElementById('myDiameterX').value=2*tool.editeddata[2][0];
+                    document.getElementById('myDiameterY').value=2*tool.editeddata[3][1];
                 }
-                document.getElementById('myHandleRadius').value=tool.handleRadius;                    
+                document.getElementById('myHandleDiameter').value=tool.handleDiameter;                    
             }
             else {
                 tool.selected = false;

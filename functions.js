@@ -17,17 +17,17 @@ function debounce(func, wait, immediate) {
     };
 };
 
-// called when radius of handle is changed
-var myHandleRadiusFunction = function() {
+// called when diameter of handle is changed
+var myHandleDiameterFunction = function() {
 
     // read the new value from HTML
-    var newHandleRadius = document.getElementById('myHandleRadius').value;
-    handleRadius=newHandleRadius;
+    var newHandleDiameter = document.getElementById('myHandleDiameter').value;
+    handleDiameter=newHandleDiameter;
 
     regularCanvas.allTools.forEach((tool, index) => {
 
         if (tool.selected == true)
-            tool.handleRadius=newHandleRadius;  
+            tool.handleDiameter=newHandleDiameter;  
 
     });
 
@@ -38,8 +38,8 @@ var myHandleRadiusFunction = function() {
 // add a tool in the shape of a rectangle
 var addRectButtonFunction = function() {
 
-    var width = document.getElementById('myRadiusX').value;
-    var height = document.getElementById('myRadiusY').value;
+    var width = document.getElementById('myDiameterX').value;
+    var height = document.getElementById('myDiameterY').value;
 
     // place the rectangle uniformly in the canvas
     // so that the whole rectangle is inside the canvas
@@ -90,23 +90,22 @@ var addRectButtonFunction = function() {
 var addEllipseButtonFunction = function(){
 
     // not clear why we need to parse this to a float but it works
-    var radiusX = parseFloat(document.getElementById('myRadiusX').value);
-    var radiusY = parseFloat(document.getElementById('myRadiusY').value);
-    var offsetX=Math.random()*(document.getElementById('myCanvasWidth').value-2*radiusX)+radiusX;
-    var offsetY=Math.random()*(document.getElementById('myCanvasHeight').value-2*radiusY)+radiusY;
+    var diameterX = parseFloat(document.getElementById('myDiameterX').value);
+    var diameterY = parseFloat(document.getElementById('myDiameterY').value);
+    var offsetX=Math.random()*(document.getElementById('myCanvasWidth').value-diameterX)+diameterX;
+    var offsetY=Math.random()*(document.getElementById('myCanvasHeight').value-diameterY)+diameterY;
 
     // add a ellipse to allTools
     var tool = new Tool("ellipse");
     var path = new Path2D();
-    //path.arc(0, 0, radius, 0, 2 * Math.PI);
-    path.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+    path.ellipse(0, 0, diameterX/2, diameterY/2, 0, 0, 2 * Math.PI);
     tool.path = path;
 
     // we also need to add the raw data and edited data
     // 100 points should be enough for a smooth path
     for (var i = 0; i < 101; i++) {
-        tool.rawdata.push([Math.cos(Math.PI * i/50.0)*radiusX, Math.sin(Math.PI * i/50.0)*radiusY]);
-        tool.editeddata.push([Math.cos(Math.PI * i/50.0)*radiusX, Math.sin(Math.PI * i/50.0)*radiusY]);
+        tool.rawdata.push([Math.cos(Math.PI * i/50.0)*diameterX/2.0, Math.sin(Math.PI * i/50.0)*diameterY/2.0]);
+        tool.editeddata.push([Math.cos(Math.PI * i/50.0)*diameterX/2.0, Math.sin(Math.PI * i/50.0)*diameterY/2.0]);
     }; 
 
     tool.offsetX = offsetX;
@@ -114,7 +113,7 @@ var addEllipseButtonFunction = function(){
 
     // put the tool handle center to the 
     // right of the tool
-    tool.handleCenterX=radiusX;
+    tool.handleCenterX=diameterX/2;
     tool.handleCenterY=0;
 
     // attach this tool to the list of tools
@@ -142,29 +141,29 @@ var changeEllipseRect = function() {
             pushOntoUndoStack(index, "m", false, true);
 
             // read the new value from the data field
-            var newRadiusX = parseFloat(document.getElementById('myRadiusX').value);
-            var newRadiusY = parseFloat(document.getElementById('myRadiusY').value);
+            var newDiameterX = parseFloat(document.getElementById('myDiameterX').value);
+            var newDiameterY = parseFloat(document.getElementById('myDiameterY').value);
             // don't mess with this; this is NOT the same as newRectWidth<1 in case
             // the input field is empty
-            if (!(newRadiusX>0)){
-                document.getElementById('myRadiusX').value=1;                
-                newRadiusX=1;                
+            if (!(newDiameterX>0)){
+                document.getElementById('myDiameterX').value=1;                
+                newDiameterX=1;                
             }
-            if (!(newRadiusY>0)){                
-                document.getElementById('myRadiusY').value=1;                
-                newRadiusY=1;
+            if (!(newDiameterY>0)){                
+                document.getElementById('myDiameterY').value=1;                
+                newDiameterY=1;
             }
 
-            // if so, get the old radius; by our construction
-            // this radiusX can be seen in the first sample of raw data
-            // and radiusY to be the 25th sample y coordinate
-            var oldRadiusX=tool.rawdata[0][0];
-            var oldRadiusY=tool.rawdata[25][1];
+            // if so, get the old diameter; by our construction
+            // this diameterX can be seen in the first sample of raw data
+            // and diameterY to be the 25th sample y coordinate
+            var oldDiameterX=tool.rawdata[0][0] * 2.0;
+            var oldDiameterY=tool.rawdata[25][1] * 2.0;
             
             // make an ellipse with the new radii
             var newPath = new Path2D();
-            //newPath.arc(0, 0, newRadius, 0, 2 * Math.PI);
-            newPath.ellipse(0, 0, newRadiusX, newRadiusY, 0, 0, 2 * Math.PI);
+            //newPath.arc(0, 0, newDiameter, 0, 2 * Math.PI);
+            newPath.ellipse(0, 0, newDiameterX/2, newDiameterY/2, 0, 0, 2 * Math.PI);
             // assign this new path to the tool
             tool.path=newPath;
  
@@ -173,29 +172,29 @@ var changeEllipseRect = function() {
             tool.rawdata =[];
             tool.editeddata =[];
             for (var i = 0; i < 100; i++) {
-                tool.rawdata.push([Math.cos(Math.PI * i/50.0)*newRadiusX, Math.sin(Math.PI * i/50.0)*newRadiusY]);
-                tool.editeddata.push([Math.cos(Math.PI * i/50.0)*newRadiusX, Math.sin(Math.PI * i/50.0)*newRadiusY]);
+                tool.rawdata.push([Math.cos(Math.PI * i/50.0)*newDiameterX/2.0, Math.sin(Math.PI * i/50.0)*newDiameterY/2.0]);
+                tool.editeddata.push([Math.cos(Math.PI * i/50.0)*newDiameterX/2.0, Math.sin(Math.PI * i/50.0)*newDiameterY/2.0]);
             }; 
 
             // leave the position of the tool handle to
             // be where it was relative to the old ellipse
-            tool.handleCenterX *= newRadiusX/oldRadiusX;
-            tool.handleCenterY *= newRadiusY/oldRadiusY;    
+            tool.handleCenterX *= newDiameterX/oldDiameterX;
+            tool.handleCenterY *= newDiameterY/oldDiameterY;    
         }  
         else if ((tool.selected == true) && (tool.type == "rectangle")){
 
             // read the new values from the data field
-            var newRectWidth = parseFloat(document.getElementById('myRadiusX').value);
-            var newRectHeight = parseFloat(document.getElementById('myRadiusY').value);
+            var newRectWidth = parseFloat(document.getElementById('myDiameterX').value);
+            var newRectHeight = parseFloat(document.getElementById('myDiameterY').value);
             // don't mess with this; this is NOT the same as newRectWidth<1 in case
             // the input field is empty
             if (!(newRectWidth>0)){
-                document.getElementById('myRadiusX').value=1;
+                document.getElementById('myDiameterX').value=1;
                 newRectWidth=1;
             }
             
             if (!(newRectHeight>0)){
-                document.getElementById('myRadiusY').value=1;
+                document.getElementById('myDiameterY').value=1;
                 newRectHeight=1;
             } 
 
@@ -750,13 +749,13 @@ var regularPlot = function() {
     ctx.stroke();
 
 
-    var sameRadiusX = true;
-    var sameRadiusY = true;
-    var sameHandleRadius = true;
+    var sameDiameterX = true;
+    var sameDiameterY = true;
+    var sameHandleDiameter = true;
     var sameBackgroundPaperSize = true;
-    var firstHandleRadius = -1;
-    var firstRadiusX = -1;
-    var firstRadiusY = -1;
+    var firstHandleDiameter = -1;
+    var firstDiameterX = -1;
+    var firstDiameterY = -1;
     var firstBackgroundPaperSize = -1;
 
     regularCanvas.allTools.forEach((tool, index) => {       
@@ -777,81 +776,81 @@ var regularPlot = function() {
             }
 
             if (tool.type == "ellipse") {
-                document.getElementById('myRadiusX').value=tool.editeddata[0][0];
-                document.getElementById('myRadiusY').value=tool.editeddata[25][1];                    
-                if (firstRadiusX == -1){
-                    firstRadiusX = tool.editeddata[0][0];
+                document.getElementById('myDiameterX').value=tool.editeddata[0][0] * 2.0;
+                document.getElementById('myDiameterY').value=tool.editeddata[25][1] * 2.0;                    
+                if (firstDiameterX == -1){
+                    firstDiameterX = tool.editeddata[0][0] * 2.0;
                 }
                 else {
-                    if (tool.editeddata[0][0] != firstRadiusX) {
-                        sameRadiusX = false;
+                    if (tool.editeddata[0][0] != firstDiameterX) {
+                        sameDiameterX = false;
                     }
                 }
-                if (firstRadiusY == -1){
-                    firstRadiusY = tool.editeddata[25][1];
+                if (firstDiameterY == -1){
+                    firstDiameterY = tool.editeddata[25][1] * 2.0;
                 }
                 else {
-                    if (tool.editeddata[25][1] != firstRadiusY) { 
-                        sameRadiusY = false;
+                    if (2*tool.editeddata[25][1] != firstDiameterY) { 
+                        sameDiameterY = false;
                     }
                 }            
             }
             if (tool.type == "rectangle"){
-                document.getElementById('myRadiusX').value=2*tool.editeddata[2][0];
-                document.getElementById('myRadiusY').value=2*tool.editeddata[3][1];
-                if (firstRadiusX == -1){
-                    firstRadiusX = 2*tool.editeddata[2][0];
+                document.getElementById('myDiameterX').value=2*tool.editeddata[2][0];
+                document.getElementById('myDiameterY').value=2*tool.editeddata[3][1];
+                if (firstDiameterX == -1){
+                    firstDiameterX = 2*tool.editeddata[2][0];
                 }
                 else{
-                    if (2*tool.editeddata[2][0] != firstRadiusX){
-                        sameRadiusX = false;
+                    if (2*tool.editeddata[2][0] != firstDiameterX){
+                        sameDiameterX = false;
                     }
                 }
-                if (firstRadiusY == -1){
-                    firstRadiusY = 2*tool.editeddata[3][1];
+                if (firstDiameterY == -1){
+                    firstDiameterY = 2*tool.editeddata[3][1];
                 }
                 else{
-                    if (2*tool.editeddata[3][1] != firstRadiusY){
-                        sameRadiusY = false;
+                    if (2*tool.editeddata[3][1] != firstDiameterY){
+                        sameDiameterY = false;
                     }
                 }
             }
                                     
-            document.getElementById('myHandleRadius').value=tool.handleRadius;                     
+            document.getElementById('myHandleDiameter').value=tool.handleDiameter;                     
             // check handle radii
-            if (firstHandleRadius == -1){
-                firstHandleRadius = tool.handleRadius;
+            if (firstHandleDiameter == -1){
+                firstHandleDiameter = tool.handleDiameter;
             }
             else{
-                if (tool.handleRadius != firstHandleRadius){
-                    sameHandleRadius = false;
+                if (tool.handleDiameter != firstHandleDiameter){
+                    sameHandleDiameter = false;
                 }
             }
         }                       
 
-        if (sameHandleRadius == true) {
+        if (sameHandleDiameter == true) {
             // make the text color white
-            document.getElementById('myHandleRadius').style.color = "white";
+            document.getElementById('myHandleDiameter').style.color = "white";
         }
         else {
             // make the text color red
-            document.getElementById('myHandleRadius').style.color = "red";
+            document.getElementById('myHandleDiameter').style.color = "red";
         }
-        if (sameRadiusX == true) {
+        if (sameDiameterX == true) {
             // make the text color white
-            document.getElementById('myRadiusX').style.color = "white";
+            document.getElementById('myDiameterX').style.color = "white";
         }
         else {
             // make the text color red
-            document.getElementById('myRadiusX').style.color = "red";
+            document.getElementById('myDiameterX').style.color = "red";
         }
-        if (sameRadiusY == true) {
+        if (sameDiameterY == true) {
             // make the text color white
-            document.getElementById('myRadiusY').style.color = "white";
+            document.getElementById('myDiameterY').style.color = "white";
         }
         else {
             // make the text color red
-            document.getElementById('myRadiusY').style.color = "red";
+            document.getElementById('myDiameterY').style.color = "red";
         }
 
         if (sameBackgroundPaperSize == true) {
@@ -865,6 +864,8 @@ var regularPlot = function() {
                 
         tool.regularPlot(ctx);
     }); 
+    // :w
+    // ctx.drawImage(imgNew,0,0,210,297);
     ctx.restore();
    
 }
@@ -1299,3 +1300,15 @@ var backgroundPaperSize = function(value) {
 } 
 
 
+// set the opacity parameter globally for all tools depending on the slider value
+var setMainCanvasOpacityFunction = function() {
+    // read the new smoothing paramter from the slider
+    var opacityParam = parseFloat(document.getElementById('mainCanvasOpacity').value);    
+    
+    regularCanvas.allTools.forEach((tool, index) => {
+        tool.opacity = opacityParam;        
+    });
+       
+    // plot all tools
+    regularPlot();
+}

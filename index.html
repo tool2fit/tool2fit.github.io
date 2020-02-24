@@ -5,7 +5,7 @@
         <title>LayOut</title>
     </head>
     <body>
-        
+
         <div class="grid-container" id="myGridContainer">
 
             <div class="grid-item-empty-11">               
@@ -21,9 +21,9 @@
                 </div>
                 <div class="PaperSize" >                        
                         <select class="backgroundPaperSize" id="backgroundPaperSize" name="backgroundPaperSize" value=1 oninput="backgroundPaperSize(this.value)" >
-                        <option value=0.5>A5</option>
+                        <option value=0.70711>A5</option>
                         <option value=1 selected>A4</option>    
-                        <option value=2>A3</option>
+                        <option value=1.41421>A3</option>
                         </select>
                 </div>
                 <div class="CanvasWidth">
@@ -114,21 +114,21 @@
                         <button class="editButton" id="addEllipseButton" value="Add Ellipse or Rectangle" ><i class="material-icons-outlined">lens</i> <span class="tooltiptext">circle | o</span> </button>                    
                         <button class="editButton" id="addRectButton" value="Add Rectangle" ><i class="material-icons-outlined">crop_square</i> <span class="tooltiptext">rectangle | b</span></button>
                         <div class="myRadii">
-                            <span class="tooltiptext">radiusX</span>
-                            <input type="number" class="mySize" id="myRadiusX" name="myRadiusX" value="20" style="position: relative; bottom: 5px;" />
-                            <span class="tooltiptext">radiusY</span>
-                            <input type="number" class="mySize" id="myRadiusY" name="myRadiusY" value="20" style="position: relative; bottom: 5px;" />
+                            <span class="tooltiptext">diameterX</span>
+                            <input type="number" class="mySize" id="myDiameterX" name="myDiameterX" value="40" style="position: relative; bottom: 5px;" />
+                            <span class="tooltiptext">diameterY</span>
+                            <input type="number" class="mySize" id="myDiameterY" name="myDiameterY" value="40" style="position: relative; bottom: 5px;" />
                         </div>
                     </div>                                                                                       
                     
                     <div class="addHandle" style="margin-top: 5px;margin-bottom: 17px">
                         <div class="Handle">
-                            <span class="tooltiptext">grip radius</span>                  
+                            <span class="tooltiptext">grip diameter</span>                  
                             <i class="material-icons-sharp" style="font-size:20px;">build</i><i class="material-icons-outlined" style="position: relative;left: -10px; font-size: 18px; color: red;">lens</i>
                         </div>
-                        <div class="GripRadius">
-                            <span class="tooltiptext">grip radius</span>
-                            <input type="number" class="mySize" id="myHandleRadius" name="myHandleRadius" value="15" style="position: relative; bottom: 5px;" />                
+                        <div class="GripDiameter">
+                            <span class="tooltiptext">grip diameter</span>
+                            <input type="number" class="mySize" id="myHandleDiameter" name="myHandleDiameter" value="30" style="position: relative; bottom: 5px;" />                
                         </div>
                         <button class="editButton" id="alignHandleHorizontalButton" value="Align Handle Horizontally to Center" ><i class="material-icons">vertical_align_center</i> <span class="tooltiptext">align grips horizontally | h</span>     </button>
                         <button class="editButton" id="alignHandleVerticalButton" value="Align Handle Vertically to Center" ><i class="material-icons" style="transform: rotate(-90deg);">vertical_align_center</i> <span class="tooltiptext">align grips vertically | v</span>    </button>
@@ -155,8 +155,12 @@
                         <button class="editButton" id="copySelectedTools" value="Copy" ><i class="material-icons-outlined">assignment</i> <span class="tooltiptext">copy </span></button>                        
                         <button class="editButton" id="pasteSelectedTools" value="Paste" ><i class="material-icons-outlined">assignment_returned</i> <span class="tooltiptext">paste</span> </button>                        
                     </div>
-                    <div class="deleteButton">
-                        <button class="editButton" id="deleteSelectedTools" value="Delete" ><i class="material-icons">delete</i> <span class="tooltiptext">delete | d</span></button>                        
+                    <div class="deleteButton">                        
+                        <div class="slidecontainer">
+                            <span style="display:inline-block;  font-family:'Courier'; font-weight:bold; font-size:14px;">Opacity </span>
+                                <input type="range" min="0" max="1" step="0.05"  value="0.5" class="slider" id="mainCanvasOpacity">
+                        </div>                
+                        <button class="editButton" id="deleteSelectedTools" value="Delete" ><i class="material-icons">delete</i> <span class="tooltiptext">delete | d</span></button>        
                     </div>
             </div>
 
@@ -172,15 +176,15 @@
                         <span style="display:inline-block; font-family:'Courier'; font-weight:bold; font-size:14px;"> Smooth </span>
                         <input type="range" min="0" max="5" step="0.05" value="1" class="slider" id="mySmoothingParam" >
                 </div>                
-                <div class="showActualToolButton">
+                <!--<div class="showActualToolButton">
                     <button class="editButton" id="loadToolImage"  onclick="document.getElementById('inputToolImage').click();"> <i class="material-icons">build</i> <span class="tooltiptext">Show tool image</span></button>
                     <input type="file" style="display:none;" id="inputToolImage" name="inputToolImage">
-            
-                    <div class="slidecontainer">
-                        <span style="display:inline-block;  font-family:'Courier'; font-weight:bold; font-size:14px;">Opacity </span>
-                            <input type="range" min="0" max="1" step="0.05"  value="0.5" class="slider" id="myOpacity">
-                    </div>
+                -->
+                <div class="slidecontainer">
+                    <span style="display:inline-block;  font-family:'Courier'; font-weight:bold; font-size:14px;">Opacity </span>
+                        <input type="range" min="0" max="1" step="0.05"  value="0.5" class="slider" id="myOpacity">
                 </div>
+                <!--</div>-->
             </div>
             
             <div class="grid-item-canvas">                                
@@ -204,12 +208,15 @@
             </div> 
             
         </div>
-        <script src="/simplify.js"></script>
-        <script src="/saveAndRestore.js"></script>
-        <script src="/toolEdit.js"></script>
-        <script src="/regularStack.js"></script>
-        <script src="/editStack.js"></script>
-        <script src="/functions.js"></script>
-        <script src="/main.js"></script>
+        <script src="http://mourner.github.io/simplify-js/simplify.js"></script>
+        <script src="saveAndRestore.js"></script>
+        <script src="toolEdit.js"></script>
+        <script src="regularStack.js"></script>
+        <script src="editStack.js"></script>
+        <script src="functions.js"></script>
+        <script src="main.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+  crossorigin="anonymous"></script>
     </body>
 </html>

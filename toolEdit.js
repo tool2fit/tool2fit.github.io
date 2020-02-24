@@ -148,7 +148,7 @@ var myDoubleClickAfterDoubleClick = function(){
     // go over all points defining the tool path
     for (var i=0; i<tool.editeddata.length-1; i++) {
         // define for the point a circle centered on this point
-        // and with radius 3
+        // and with diameter 3
         var path = new Path2D();
         path.arc(tool.editeddata[i][0], tool.editeddata[i][1], 3, 0, 2 * Math.PI);        
         
@@ -422,14 +422,12 @@ var myKeyDownAfterDoubleClick = function() {
         canvas.removeEventListener('dblclick', myDoubleClickAfterDoubleClick, false);
         canvas.removeEventListener('mousemove', myMouseMoveAfterDoubleClick, false);
         canvas.removeEventListener('mousedown', myMouseDownAfterDoubleClick, false);
-        inputToolImage.removeEventListener('change', inputToolImageFunction, false);
+        //inputToolImage.removeEventListener('change', inputToolImageFunction, false);
         undoEditButton.removeEventListener('click', undoEditButtonFunction, false); 
         redoEditButton.removeEventListener('click', redoEditButtonFunction, false); 
 
         // activate all event listeners
-        // inputFileButton.addEventListener('change', function(){readNewFile(inputFileButton)}, false);
-        inputFileButton.addEventListener('change', readNewFile, false);
-        //inputCanvasButton.addEventListener('change', function(){readOldCanvas(inputCanvasButton)}, false);
+        inputFileButton.addEventListener('change', readAndProcessImageAndCreateNewTool, false);
         inputCanvasButton.addEventListener('change', readOldCanvas, false);
         canvas.addEventListener('mousedown', myMouseDown, false);
         canvas.addEventListener('mouseup', myMouseUp, false);
@@ -456,14 +454,16 @@ var myKeyDownAfterDoubleClick = function() {
         alignVerticalRightButton.addEventListener('click', function(){alignVerticalButtonFunction('right')}, false);
         alignHandleHorizontalButton.addEventListener('click', alignHandleHorizontalButtonFunction, false); 
         alignHandleVerticalButton.addEventListener('click', alignHandleVerticalButtonFunction, false); 
-        myHandleRadius.addEventListener('change', myHandleRadiusFunction, false); 
+        myHandleDiameter.addEventListener('change', myHandleDiameterFunction, false); 
         addRectButton.addEventListener('click', addRectButtonFunction, false);        
         addEllipseButton.addEventListener('click', addEllipseButtonFunction, false);
-        myRadiusX.addEventListener('change', changeEllipseRect, false); 
-        myRadiusY.addEventListener('change', changeEllipseRect, false); 
+        myDiameterX.addEventListener('change', changeEllipseRect, false); 
+        myDiameterY.addEventListener('change', changeEllipseRect, false); 
         rotateLeftButton.addEventListener('click', rotateLeftButtonFunction, false);
         rotateRightButton.addEventListener('click', rotateRightButtonFunction, false);
         saveCanvas.addEventListener('click', saveCanvasFunction, false);
+        anchorPointButton.addEventListener('click', anchorPointButtonFunction, false);
+        mainCanvasOpacity.addEventListener('change', setMainCanvasOpacityFunction, false);   
 
         // redraw tools
         regularPlot();

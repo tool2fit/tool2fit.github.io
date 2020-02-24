@@ -331,7 +331,7 @@ body {
     display: inline-block;
 }
 
-.GripRadius{
+.GripDiameter{
     display: inline-block;
 }
 
@@ -394,7 +394,7 @@ body {
   }
 
 
-  .GripRadius .tooltiptext {
+  .GripDiameter .tooltiptext {
     visibility: hidden;
     width: auto;
     background-color:  #464545;
@@ -411,7 +411,7 @@ body {
     z-index: 1;    
   }
   
-  .GripRadius:hover .tooltiptext {
+  .GripDiameter:hover .tooltiptext {
     visibility: visible;
   }
 
